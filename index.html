@@ -452,6 +452,9 @@
 
     .editor-dock {
       position: fixed;
+      max-width: calc(100% - 16px);
+      overflow-x: auto;
+      scrollbar-width: none;
       z-index: 50;
       left: 50%;
       bottom: max(16px, env(safe-area-inset-bottom));
@@ -1481,6 +1484,8 @@
         if (t) { t.classList.remove('show'); t.textContent = ''; }
         var tm = clone.querySelector('#nbTokenModal');
         if (tm) tm.remove();
+        var lm = clone.querySelector('#nbLinkModal');
+        if (lm) lm.remove();
         var eb = clone.querySelector('#editButton');
         var pb = clone.querySelector('#previewButton');
         if (eb) eb.removeAttribute('hidden');
@@ -1541,13 +1546,19 @@
       if (saveBtn) saveBtn.addEventListener('click', function () { doSave(false); });
 
       /* ===== XUAT BAN LEN GITHUB (1 cham) ===== */
-      var GH_OWNER = 'nangbammo-create';
-      var GH_REPO = 'nangbammoprofile';
-      var GH_BRANCH = 'main';
-      var GH_PATH = 'index.html';
+      var GH_DEFAULTS = { owner: 'nangbammo-create', repo: 'nangbammoprofile', branch: 'main', path: 'index.html' };
       var TOKEN_KEY = 'nangba-github-token';
+      var GHCONF_KEY = 'nangba-github-config';
+      function ghConf() {
+        var c = { owner: GH_DEFAULTS.owner, repo: GH_DEFAULTS.repo, branch: GH_DEFAULTS.branch, path: GH_DEFAULTS.path };
+        try {
+          var s = JSON.parse(localStorage.getItem(GHCONF_KEY) || '{}');
+          ['owner', 'repo', 'branch', 'path'].forEach(function (k) { if (s[k]) c[k] = String(s[k]).trim(); });
+        } catch (e) {}
+        return c;
+      }
 
-      function openTokenModal() {
+      function openTokenModal(prefillToken) {
         closeTokenModal();
         var ov = document.createElement('div');
         ov.id = 'nbTokenModal';
@@ -1556,6 +1567,12 @@
           '<div style="width:min(430px,100%);background:#10201c;color:#fff;border-radius:16px;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.4);">' +
           '<div style="font-weight:800;font-size:1.05rem;margin-bottom:8px;">Xuất bản lên GitHub</div>' +
           '<div style="font-size:.85rem;line-height:1.6;opacity:.88;margin-bottom:10px;">Tạo token 1 lần duy nhất:<br>1. Vào <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener" style="color:#7ef0c8;">github.com/settings/tokens/new</a><br>2. Tick chọn <b>repo</b> rồi bấm <b>Generate token</b><br>3. Copy token, dán vào ô dưới.</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">' +
+          '<input id="nbConfOwner" placeholder="Chủ repo (vd: nangbammo-create)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;">' +
+          '<input id="nbConfRepo" placeholder="Tên repo (vd: biolink-profilepersonal)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;">' +
+          '<input id="nbConfBranch" placeholder="Nhánh (mặc định: main)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;">' +
+          '<input id="nbConfPath" placeholder="Tên file (mặc định: index.html)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;">' +
+          '</div>' +
           '<input id="nbTokenInput" type="password" placeholder="Dán GitHub token vào đây" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;margin-bottom:12px;">' +
           '<div style="display:flex;gap:10px;">' +
           '<button id="nbTokenSave" type="button" style="flex:1;padding:11px;border-radius:10px;border:0;background:#0d9488;color:#fff;font-weight:700;">Lưu &amp; Xuất bản</button>' +
@@ -1564,12 +1581,30 @@
           '<div style="font-size:.75rem;opacity:.6;margin-top:10px;">Token chỉ lưu trên máy này, không nằm trong file xuất bản.</div>' +
           '</div>';
         document.body.appendChild(ov);
+        try {
+          var _cfg = ghConf();
+          document.getElementById('nbConfOwner').value = _cfg.owner;
+          document.getElementById('nbConfRepo').value = _cfg.repo;
+          document.getElementById('nbConfBranch').value = _cfg.branch;
+          document.getElementById('nbConfPath').value = _cfg.path;
+          if (prefillToken) document.getElementById('nbTokenInput').value = localStorage.getItem(TOKEN_KEY) || '';
+        } catch (e) {}
         ov.addEventListener('click', function (e) { if (e.target === ov) closeTokenModal(); });
         document.getElementById('nbTokenCancel').addEventListener('click', closeTokenModal);
         document.getElementById('nbTokenSave').addEventListener('click', function () {
           var v = document.getElementById('nbTokenInput').value.trim();
           if (!v) { nbToast('Hãy dán token trước nhé.'); return; }
-          try { localStorage.setItem(TOKEN_KEY, v); } catch (e) {}
+          var nc = {
+            owner: document.getElementById('nbConfOwner').value.trim(),
+            repo: document.getElementById('nbConfRepo').value.trim(),
+            branch: document.getElementById('nbConfBranch').value.trim() || 'main',
+            path: document.getElementById('nbConfPath').value.trim() || 'index.html'
+          };
+          if (!nc.owner || !nc.repo) { nbToast('Điền đủ Chủ repo và Tên repo nhé.'); return; }
+          try {
+            localStorage.setItem(TOKEN_KEY, v);
+            localStorage.setItem(GHCONF_KEY, JSON.stringify(nc));
+          } catch (e) {}
           closeTokenModal();
           doPublish();
         });
@@ -1603,16 +1638,17 @@
         downscaleBigImages(clone).then(function () {
           var htmlStr = '<!doctype html>\n' + clone.outerHTML;
           var content = b64Unicode(htmlStr);
-          var api = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/' + GH_PATH;
+          var cfg = ghConf();
+          var api = 'https://api.github.com/repos/' + cfg.owner + '/' + cfg.repo + '/contents/' + cfg.path;
           var headers = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' };
           function putFile(sha) {
             return fetch(api, {
               method: 'PUT',
               headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
-              body: JSON.stringify({ message: 'Cap nhat trang ' + new Date().toLocaleString('vi-VN'), content: content, sha: sha, branch: GH_BRANCH })
+              body: JSON.stringify({ message: 'Cap nhat trang ' + new Date().toLocaleString('vi-VN'), content: content, sha: sha, branch: cfg.branch })
             });
           }
-          fetch(api + '?ref=' + GH_BRANCH, { headers: headers })
+          fetch(api + '?ref=' + cfg.branch, { headers: headers })
             .then(function (r) {
               if (r.status === 401) throw new Error('unauth');
               if (r.status === 404) throw new Error('notfound');
@@ -1630,7 +1666,7 @@
             .catch(function (err) {
               var m = String((err && err.message) || '');
               if (m === 'unauth') { nbToast('Token sai hoặc hết hạn — nhập lại token nhé.'); openTokenModal(); }
-              else if (m === 'notfound') nbToast('Không tìm thấy repo/file trên GitHub.');
+              else if (m === 'notfound') { nbToast('Sai tên repo/file hoặc token thiếu quyền repo — kiểm tra lại nhé.'); openTokenModal(true); }
               else if (m === 'conflict') nbToast('File trên GitHub vừa đổi — thử xuất bản lại.');
               else nbToast('Xuất bản lỗi. Kiểm tra mạng rồi thử lại.');
             })
@@ -1720,9 +1756,9 @@
           var list = document.getElementById('hlList');
           if (!tpl || !list) return;
           uid++;
-          var pduid = 'pdUpNew' + Date.now() + uid;
+          var hluid = 'hlUpNew' + Date.now() + uid;
           var tmp = document.createElement('div');
-          tmp.innerHTML = tpl.innerHTML.replace(/__PDUID__/g, pduid);
+          tmp.innerHTML = tpl.innerHTML.replace(/__HLUID__/g, hluid);
           var node = tmp.firstElementChild;
           if (document.body.classList.contains('editing')) {
             node.querySelectorAll('[data-editable]').forEach(function (n) { n.setAttribute('contenteditable', 'true'); });
@@ -2065,9 +2101,9 @@
           var grid = document.getElementById('productGrid');
           if (!tpl || !grid) return;
           uid++;
-          var id = 'hlUpNew' + Date.now() + uid;
+          var id = 'pdUpNew' + Date.now() + uid;
           var tmp = document.createElement('div');
-          tmp.innerHTML = tpl.innerHTML.replace(/__HLUID__/g, id);
+          tmp.innerHTML = tpl.innerHTML.replace(/__PDUID__/g, id);
           var node = tmp.firstElementChild;
           if (document.body.classList.contains('editing')) {
             node.querySelectorAll('[data-editable]').forEach(function (n) { n.setAttribute('contenteditable', 'true'); });
@@ -2078,6 +2114,240 @@
           pdSave();
         });
       }
+    }());
+  </script>
+
+  <script>
+    /* NB-PERSONAL-LINK: nut "Link ca nhan" — tao link chua thong tin da sua, ai mo cung thay */
+    (function () {
+      'use strict';
+
+      function toast(msg) {
+        var t = document.getElementById('toast');
+        if (!t) return;
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(t._nb);
+        t._nb = setTimeout(function () { t.classList.remove('show'); }, 3000);
+      }
+
+      function txt(sel) {
+        var el = document.querySelector(sel);
+        return el ? el.textContent.trim() : '';
+      }
+      function linkHref(sel) {
+        var el = document.querySelector(sel);
+        var h = el ? el.getAttribute('href') : '';
+        return (h && h !== '#') ? h : '';
+      }
+
+      /* Thu thap thong tin ca nhan tren trang hien tai */
+      function collectData() {
+        var intros = document.querySelectorAll('section[aria-labelledby="aboutTitle"] .intro-text');
+        return {
+          n: txt('#profileName'),
+          r: txt('.profile-role'),
+          l: txt('.profile-location'),
+          at: txt('#aboutTitle'),
+          a1: intros[0] ? intros[0].textContent.trim() : '',
+          a2: intros[1] ? intros[1].textContent.trim() : '',
+          zp: linkHref('#zaloPersonalLink'),
+          zg: linkHref('#zaloGroupLink'),
+          fb: linkHref('#facebookLink'),
+          yt: linkHref('#youtubeLink'),
+          tt: linkHref('#tiktokLink')
+        };
+      }
+
+      function enc(obj) {
+        var bytes = new TextEncoder().encode(JSON.stringify(obj));
+        var bin = '';
+        for (var i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+        return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      }
+      function dec(s) {
+        s = String(s).replace(/-/g, '+').replace(/_/g, '/');
+        while (s.length % 4) s += '=';
+        var bin = atob(s);
+        var bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return JSON.parse(new TextDecoder().decode(bytes));
+      }
+
+      /* Ap du lieu tu link ca nhan (?c=...) — chi doi giao dien, khong ghi de ban luu cua nguoi xem */
+      function applyData(d) {
+        if (!d || typeof d !== 'object') return;
+        function setT(sel, v) { if (v == null || v === '') return; var el = document.querySelector(sel); if (el) el.textContent = v; }
+        function setH(aSel, fSel, v) {
+          if (v == null || v === '') return;
+          var a = document.querySelector(aSel);
+          if (a) a.setAttribute('href', v);
+          var inp = document.querySelector('input[data-url-for="' + fSel + '"]');
+          if (inp) inp.value = v;
+        }
+        setT('#profileName', d.n);
+        setT('.profile-role', d.r);
+        setT('.profile-location', d.l);
+        setT('#aboutTitle', d.at);
+        var intros = document.querySelectorAll('section[aria-labelledby="aboutTitle"] .intro-text');
+        if (d.a1 && intros[0]) intros[0].textContent = d.a1;
+        if (d.a2 && intros[1]) intros[1].textContent = d.a2;
+        setH('#zaloPersonalLink', '#zaloPersonalLink', d.zp);
+        setH('#zaloGroupLink', '#zaloGroupLink', d.zg);
+        setH('#facebookLink', '#facebookLink', d.fb);
+        setH('#youtubeLink', '#youtubeLink', d.yt);
+        setH('#tiktokLink', '#tiktokLink', d.tt);
+        setImg('#avatarImage', 'avatar', d.av);
+        setImg('#coverImage', 'cover', d.cv);
+      }
+
+      function setImg(sel, type, v) {
+        if (!v || typeof v !== 'string' || v.indexOf('data:image/') !== 0) return;
+        var el = document.querySelector(sel);
+        if (!el) return;
+        el.setAttribute('src', v);
+        el.removeAttribute('hidden');
+        el.style.removeProperty('--' + type + '-x');
+        el.style.removeProperty('--' + type + '-y');
+        el.style.removeProperty('--' + type + '-zoom');
+      }
+
+      function applyFromUrl() {
+        try {
+          var m = location.search.match(/[?&]c=([^&]+)/);
+          if (!m) return;
+          applyData(dec(decodeURIComponent(m[1])));
+        } catch (e) {}
+      }
+
+      /* Nut Link ca nhan tren thanh cong cu */
+      var dock = document.querySelector('.editor-dock');
+      var linkBtn = document.getElementById('nbLinkButton');
+      if (!linkBtn && dock) {
+        linkBtn = document.createElement('button');
+        linkBtn.type = 'button';
+        linkBtn.id = 'nbLinkButton';
+        linkBtn.className = 'dock-button';
+        linkBtn.setAttribute('aria-label', 'Tạo link cá nhân');
+        linkBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg><span>Link cá nhân</span>';
+        var dl = document.getElementById('downloadButton');
+        dock.insertBefore(linkBtn, dl || null);
+      }
+
+      function closeLinkModal() {
+        var m = document.getElementById('nbLinkModal');
+        if (m) m.remove();
+      }
+
+      /* Nen anh dai dien + anh bia cho vua duong link (co timeout an toan) */
+      function downscaleImg(sel, maxW, q) {
+        return new Promise(function (res) {
+          var done = false;
+          function fin(v) { if (!done) { done = true; res(v); } }
+          setTimeout(function () { fin(''); }, 4000);
+          var el = document.querySelector(sel);
+          var src = el ? el.getAttribute('src') : '';
+          if (!src || src.indexOf('data:image/') !== 0) { fin(''); return; }
+          var im = new Image();
+          im.onload = function () {
+            try {
+              var s = Math.min(1, maxW / im.width);
+              var w = Math.max(1, Math.round(im.width * s));
+              var h = Math.max(1, Math.round(im.height * s));
+              var c = document.createElement('canvas');
+              c.width = w; c.height = h;
+              c.getContext('2d').drawImage(im, 0, 0, w, h);
+              fin(c.toDataURL('image/jpeg', q));
+            } catch (e) { fin(''); }
+          };
+          im.onerror = function () { fin(''); };
+          im.src = src;
+        });
+      }
+
+      function shortenUrl(longUrl) {
+        return fetch('https://da.gd/s?url=' + encodeURIComponent(longUrl))
+          .then(function (r) { if (!r.ok) throw new Error('net'); return r.text(); })
+          .then(function (t) {
+            t = String(t || '').trim();
+            if (t.indexOf('http') !== 0) throw new Error('bad');
+            return t;
+          });
+      }
+
+      function openLinkModal(shortUrl, fullUrl, textUrl) {
+        closeLinkModal();
+        var ov = document.createElement('div');
+        ov.id = 'nbLinkModal';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(5,12,10,.6);padding:18px;';
+        ov.innerHTML =
+          '<div style="width:min(460px,100%);background:#10201c;color:#fff;border-radius:16px;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.4);">' +
+          '<div style="font-weight:800;font-size:1.05rem;margin-bottom:10px;">Link cá nhân của bạn</div>' +
+          '<div style="font-size:.82rem;font-weight:700;margin-bottom:6px;">Link rút gọn — ngắn gọn, dễ chia sẻ</div>' +
+          '<input id="nbShortUrl" readonly placeholder="Đang rút gọn..." style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;margin-bottom:8px;font-size:.85rem;">' +
+          '<div style="display:flex;gap:10px;margin-bottom:14px;">' +
+          '<button id="nbCopyShort" type="button" style="flex:1;padding:11px;border-radius:10px;border:0;background:#0d9488;color:#fff;font-weight:700;">Copy link rút gọn</button>' +
+          '<button id="nbRetryShort" type="button" style="padding:11px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;">Thử lại</button>' +
+          '</div>' +
+          '<div style="font-size:.82rem;font-weight:700;margin-bottom:6px;">Link đầy đủ — kèm ảnh đại diện + ảnh bìa</div>' +
+          '<input id="nbPersonalUrl" readonly style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;margin-bottom:8px;font-size:.8rem;">' +
+          '<div style="display:flex;gap:10px;">' +
+          '<button id="nbCopyLink" type="button" style="flex:1;padding:11px;border-radius:10px;border:0;background:#0d9488;color:#fff;font-weight:700;">Copy link đầy đủ</button>' +
+          '<button id="nbLinkClose" type="button" style="padding:11px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;">Đóng</button>' +
+          '</div>' +
+          '<div style="font-size:.75rem;opacity:.6;margin-top:10px;">Link rút gọn chỉ gồm chữ và đường link (không kèm ảnh). Link đầy đủ thì có ảnh nhưng dài hơn.</div>' +
+          '</div>';
+        ov._textUrl = textUrl;
+        document.body.appendChild(ov);
+        var sInp = document.getElementById('nbShortUrl');
+        var fInp = document.getElementById('nbPersonalUrl');
+        fInp.value = fullUrl;
+        if (shortUrl) sInp.value = shortUrl;
+        else sInp.placeholder = 'Rút gọn thất bại — bấm Thử lại nhé.';
+        ov.addEventListener('click', function (e) { if (e.target === ov) closeLinkModal(); });
+        document.getElementById('nbLinkClose').addEventListener('click', closeLinkModal);
+        [sInp, fInp].forEach(function (inp) { inp.addEventListener('click', function () { inp.select(); }); });
+        function bindCopy(btnId, inpId) {
+          document.getElementById(btnId).addEventListener('click', function () {
+            var inp = document.getElementById(inpId);
+            if (!inp.value) { toast('Chưa có link để copy.'); return; }
+            function done() { toast('Đã copy link!'); }
+            function legacy() { inp.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Chạm giữ để copy tay giúp mình nhé.'); } }
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(inp.value).then(done, legacy);
+            else legacy();
+          });
+        }
+        bindCopy('nbCopyShort', 'nbShortUrl');
+        bindCopy('nbCopyLink', 'nbPersonalUrl');
+        document.getElementById('nbRetryShort').addEventListener('click', function () {
+          var b = this;
+          b.disabled = true; b.style.opacity = '.55';
+          sInp.value = ''; sInp.placeholder = 'Đang rút gọn...';
+          shortenUrl(ov._textUrl).then(function (v) {
+            sInp.value = v; sInp.placeholder = '';
+            toast('Đã rút gọn link!');
+          }).catch(function () {
+            sInp.placeholder = 'Rút gọn thất bại — bấm Thử lại nhé.';
+          }).then(function () { b.disabled = false; b.style.opacity = ''; });
+        });
+      }
+
+      if (linkBtn) linkBtn.addEventListener('click', function () {
+        toast('Đang tạo link cá nhân...');
+        var data = collectData();
+        var base = location.href.split('?')[0].split('#')[0];
+        var textUrl = base + '?c=' + enc(data);
+        var shortP = shortenUrl(textUrl).catch(function () { return ''; });
+        var fullP = Promise.all([downscaleImg('#avatarImage', 200, 0.6), downscaleImg('#coverImage', 420, 0.6)]).then(function (rs) {
+          if (rs[0]) data.av = rs[0];
+          if (rs[1]) data.cv = rs[1];
+          return base + '?c=' + enc(data);
+        });
+        Promise.all([shortP, fullP]).then(function (rs) { openLinkModal(rs[0], rs[1], textUrl); });
+      });
+
+      /* Ap link ca nhan khi mo trang co ?c= */
+      applyFromUrl();
     }());
   </script>
 
