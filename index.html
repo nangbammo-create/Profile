@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,600;6..72,700&display=swap" rel="stylesheet">
-  <title>Nàng Ba MMO Profile</title>
+  <title>Biolink - Profile</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -810,7 +810,7 @@
         <p class="profile-location" data-editable>Thông tin nổi bật bạn muốn giới thiệu/hiển thị</p>
       </div>
       <div class="contact-socials" aria-label="Liên kết mạng xã hội">
-        <a class="contact-icon" id="zaloPersonalLink" href="#" data-link aria-label="Zalo cá nhân" title="Zalo cá nhân">
+        <a class="contact-icon" id="zaloPersonalLink" href="https://zalo.me/0785568539" data-link aria-label="Zalo cá nhân" title="Zalo cá nhân">
           <svg viewBox="0 0 48 48" role="img" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#0068ff"/><path d="M10 13.5h28v18.2a5.8 5.8 0 0 1-5.8 5.8H23l-6.8 4v-4H15.8a5.8 5.8 0 0 1-5.8-5.8z" fill="#fff"/><text x="24" y="28.8" text-anchor="middle" font-family="Arial,sans-serif" font-size="12.8" font-weight="700" fill="#0068ff">Zalo</text></svg>
         </a>
         <a class="contact-icon" id="zaloGroupLink" href="#" data-link aria-label="Group Zalo Cộng đồng" title="Group Zalo Cộng đồng">
@@ -827,7 +827,7 @@
         </a>
       </div>
       <div class="contact-fields" aria-label="Chỉnh sửa liên kết mạng xã hội">
-        <div class="contact-url-row"><label for="zaloPersonalUrl">Zalo cá nhân</label><input id="zaloPersonalUrl" type="url" value="" data-url-for="#zaloPersonalLink" inputmode="url" placeholder="https://..."></div>
+        <div class="contact-url-row"><label for="zaloPersonalUrl">Zalo cá nhân</label><input id="zaloPersonalUrl" type="url" value="https://zalo.me/0785568539" data-url-for="#zaloPersonalLink" inputmode="url" placeholder="https://..."></div>
         <div class="contact-url-row"><label for="zaloGroupUrl">Group Zalo Cộng đồng</label><input id="zaloGroupUrl" type="url" value="" data-url-for="#zaloGroupLink" inputmode="url" placeholder="https://..."></div>
         <div class="contact-url-row"><label for="facebookUrl">Facebook</label><input id="facebookUrl" type="url" value="" data-url-for="#facebookLink" inputmode="url" placeholder="https://..."></div>
         <div class="contact-url-row"><label for="youtubeUrl">YouTube</label><input id="youtubeUrl" type="url" value="" data-url-for="#youtubeLink" inputmode="url" placeholder="https://..."></div>
@@ -1446,6 +1446,19 @@
         dock.insertBefore(saveBtn, dl || null);
       }
 
+      /* Nut Xuat ban: day HTML hien tai len GitHub -> Vercel tu deploy */
+      var pubBtn = document.getElementById('nbPublishButton');
+      if (!pubBtn && dock) {
+        pubBtn = document.createElement('button');
+        pubBtn.type = 'button';
+        pubBtn.id = 'nbPublishButton';
+        pubBtn.className = 'dock-button';
+        pubBtn.setAttribute('aria-label', 'Xuất bản lên GitHub');
+        pubBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 20h16"/></svg><span>Xuất bản</span>';
+        var dl2 = document.getElementById('downloadButton');
+        dock.insertBefore(pubBtn, dl2 || null);
+      }
+
       function syncInputs(root) {
         root.querySelectorAll('input').forEach(function (i) {
           if (i.type !== 'file') i.setAttribute('value', i.value);
@@ -1466,6 +1479,8 @@
         clone.querySelectorAll('.hl-clone').forEach(function (n) { n.remove(); });
         var t = clone.querySelector('#toast');
         if (t) { t.classList.remove('show'); t.textContent = ''; }
+        var tm = clone.querySelector('#nbTokenModal');
+        if (tm) tm.remove();
         var eb = clone.querySelector('#editButton');
         var pb = clone.querySelector('#previewButton');
         if (eb) eb.removeAttribute('hidden');
@@ -1524,6 +1539,106 @@
       }
 
       if (saveBtn) saveBtn.addEventListener('click', function () { doSave(false); });
+
+      /* ===== XUAT BAN LEN GITHUB (1 cham) ===== */
+      var GH_OWNER = 'nangbammo-create';
+      var GH_REPO = 'nangbammoprofile';
+      var GH_BRANCH = 'main';
+      var GH_PATH = 'index.html';
+      var TOKEN_KEY = 'nangba-github-token';
+
+      function openTokenModal() {
+        closeTokenModal();
+        var ov = document.createElement('div');
+        ov.id = 'nbTokenModal';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(5,12,10,.6);padding:18px;';
+        ov.innerHTML =
+          '<div style="width:min(430px,100%);background:#10201c;color:#fff;border-radius:16px;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.4);">' +
+          '<div style="font-weight:800;font-size:1.05rem;margin-bottom:8px;">Xuất bản lên GitHub</div>' +
+          '<div style="font-size:.85rem;line-height:1.6;opacity:.88;margin-bottom:10px;">Tạo token 1 lần duy nhất:<br>1. Vào <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener" style="color:#7ef0c8;">github.com/settings/tokens/new</a><br>2. Tick chọn <b>repo</b> rồi bấm <b>Generate token</b><br>3. Copy token, dán vào ô dưới.</div>' +
+          '<input id="nbTokenInput" type="password" placeholder="Dán GitHub token vào đây" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;margin-bottom:12px;">' +
+          '<div style="display:flex;gap:10px;">' +
+          '<button id="nbTokenSave" type="button" style="flex:1;padding:11px;border-radius:10px;border:0;background:#0d9488;color:#fff;font-weight:700;">Lưu &amp; Xuất bản</button>' +
+          '<button id="nbTokenCancel" type="button" style="padding:11px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;">Đóng</button>' +
+          '</div>' +
+          '<div style="font-size:.75rem;opacity:.6;margin-top:10px;">Token chỉ lưu trên máy này, không nằm trong file xuất bản.</div>' +
+          '</div>';
+        document.body.appendChild(ov);
+        ov.addEventListener('click', function (e) { if (e.target === ov) closeTokenModal(); });
+        document.getElementById('nbTokenCancel').addEventListener('click', closeTokenModal);
+        document.getElementById('nbTokenSave').addEventListener('click', function () {
+          var v = document.getElementById('nbTokenInput').value.trim();
+          if (!v) { nbToast('Hãy dán token trước nhé.'); return; }
+          try { localStorage.setItem(TOKEN_KEY, v); } catch (e) {}
+          closeTokenModal();
+          doPublish();
+        });
+      }
+      function closeTokenModal() {
+        var m = document.getElementById('nbTokenModal');
+        if (m) m.remove();
+      }
+
+      function b64Unicode(str) {
+        var bytes = new TextEncoder().encode(str);
+        var bin = '';
+        for (var i = 0; i < bytes.length; i += 0x8000) {
+          bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+        }
+        return btoa(bin);
+      }
+
+      var publishing = false;
+      function doPublish() {
+        if (publishing) return;
+        var token = null;
+        try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
+        if (!token) { openTokenModal(); return; }
+        publishing = true;
+        if (pubBtn) { pubBtn.disabled = true; pubBtn.style.opacity = '.55'; }
+        nbToast('Đang xuất bản lên GitHub...');
+        var clone;
+        try { clone = cleanClone(); }
+        catch (e) { publishing = false; if (pubBtn) { pubBtn.disabled = false; pubBtn.style.opacity = ''; } nbToast('Không xuất bản được lúc này.'); return; }
+        downscaleBigImages(clone).then(function () {
+          var htmlStr = '<!doctype html>\n' + clone.outerHTML;
+          var content = b64Unicode(htmlStr);
+          var api = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/' + GH_PATH;
+          var headers = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' };
+          function putFile(sha) {
+            return fetch(api, {
+              method: 'PUT',
+              headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: 'Cap nhat trang ' + new Date().toLocaleString('vi-VN'), content: content, sha: sha, branch: GH_BRANCH })
+            });
+          }
+          fetch(api + '?ref=' + GH_BRANCH, { headers: headers })
+            .then(function (r) {
+              if (r.status === 401) throw new Error('unauth');
+              if (r.status === 404) throw new Error('notfound');
+              if (!r.ok) throw new Error('getsha');
+              return r.json();
+            })
+            .then(function (info) { return putFile(info.sha); })
+            .then(function (r) {
+              if (r.status === 401) throw new Error('unauth');
+              if (r.status === 422) throw new Error('conflict');
+              if (!r.ok) throw new Error('putfail');
+              return r.json();
+            })
+            .then(function () { nbToast('Đã xuất bản! Vercel cập nhật sau ~1 phút.'); })
+            .catch(function (err) {
+              var m = String((err && err.message) || '');
+              if (m === 'unauth') { nbToast('Token sai hoặc hết hạn — nhập lại token nhé.'); openTokenModal(); }
+              else if (m === 'notfound') nbToast('Không tìm thấy repo/file trên GitHub.');
+              else if (m === 'conflict') nbToast('File trên GitHub vừa đổi — thử xuất bản lại.');
+              else nbToast('Xuất bản lỗi. Kiểm tra mạng rồi thử lại.');
+            })
+            .then(function () { publishing = false; if (pubBtn) { pubBtn.disabled = false; pubBtn.style.opacity = ''; } });
+        });
+      }
+
+      if (pubBtn) pubBtn.addEventListener('click', doPublish);
 
       /* Tự động lưu sau mỗi thao tác chỉnh sửa */
       var tmr = null;
